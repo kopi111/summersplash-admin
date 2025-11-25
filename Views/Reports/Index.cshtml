@@ -1,0 +1,269 @@
+@model List<SummerSplashWeb.Models.ServiceTechReport>
+@{
+    ViewData["Title"] = "Service Reports";
+}
+
+@if (ViewBag.Error != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        @ViewBag.Error
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- Filters -->
+<div class="card mb-4" style="border: none; border-radius: 15px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);">
+    <div class="card-body">
+        <form method="get" asp-action="Index" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">
+                    <i class="bi bi-calendar-range me-1"></i> Start Date
+                </label>
+                <input type="date"
+                       class="form-control"
+                       name="startDate"
+                       value="@ViewBag.StartDate">
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">
+                    <i class="bi bi-calendar-check me-1"></i> End Date
+                </label>
+                <input type="date"
+                       class="form-control"
+                       name="endDate"
+                       value="@ViewBag.EndDate">
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">
+                    <i class="bi bi-geo-alt me-1"></i> Location
+                </label>
+                <select class="form-select" name="locationId">
+                    <option value="">All Locations</option>
+                    @if (ViewBag.Locations != null)
+                    {
+                        foreach (var loc in (List<SummerSplashWeb.Models.JobLocation>)ViewBag.Locations)
+                        {
+                            <option value="@loc.LocationId" selected="@(ViewBag.LocationId == loc.LocationId)">@loc.Name</option>
+                        }
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">
+                    <i class="bi bi-person me-1"></i> Technician
+                </label>
+                <select class="form-select" name="techId">
+                    <option value="">All Techs</option>
+                    @if (ViewBag.Techs != null)
+                    {
+                        foreach (var tech in (List<SummerSplashWeb.Models.User>)ViewBag.Techs)
+                        {
+                            <option value="@tech.UserId" selected="@(ViewBag.TechId == tech.UserId)">@tech.FirstName @tech.LastName</option>
+                        }
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-funnel me-1"></i> Filter
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Reports Table -->
+<div class="custom-table">
+    <div style="padding: 20px; border-bottom: 1px solid #f1f3f5; display: flex; justify-content: space-between; align-items: center;">
+        <h5 class="mb-0" style="color: #344767; font-weight: 700;">
+            <i class="bi bi-file-earmark-text me-2"></i>
+            Service Reports
+        </h5>
+        <span class="badge bg-primary" style="font-size: 14px;">@Model.Count reports</span>
+    </div>
+
+    @if (Model.Any())
+    {
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>Report #</th>
+                    <th>Date</th>
+                    <th>Technician</th>
+                    <th>Location</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var report in Model.OrderByDescending(r => r.ServiceDate))
+                {
+                    <tr>
+                        <td>
+                            <div style="font-weight: 600; color: #344767;">
+                                #@report.ReportId
+                            </div>
+                        </td>
+                        <td>
+                            <small class="text-muted">
+                                <i class="bi bi-calendar me-1"></i>
+                                @report.ServiceDate.ToString("MMM dd, yyyy")
+                            </small>
+                        </td>
+                        <td>
+                            <div style="font-weight: 600; color: #344767;">
+                                @report.TechName
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-info">@report.LocationName</span>
+                        </td>
+                        <td>
+                            @if (report.ServiceType == "Routine")
+                            {
+                                <span class="badge bg-primary">
+                                    <i class="bi bi-arrow-repeat me-1"></i>Routine
+                                </span>
+                            }
+                            else if (report.ServiceType == "Emergency")
+                            {
+                                <span class="badge bg-danger">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>Emergency
+                                </span>
+                            }
+                            else if (report.ServiceType == "Maintenance")
+                            {
+                                <span class="badge bg-warning">
+                                    <i class="bi bi-wrench me-1"></i>Maintenance
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">@report.ServiceType</span>
+                            }
+                        </td>
+                        <td>
+                            <span class="badge bg-success">
+                                <i class="bi bi-check-circle me-1"></i>Completed
+                            </span>
+                        </td>
+                        <td>
+                            <a href="@Url.Action("Details", new { id = report.ReportId })"
+                               class="btn btn-sm btn-primary">
+                                <i class="bi bi-eye me-1"></i>View
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <div style="padding: 60px; text-align: center; color: #7b809a;">
+            <i class="bi bi-file-earmark-text" style="font-size: 64px; opacity: 0.3;"></i>
+            <p class="mt-3 mb-0">No reports found</p>
+            <small class="text-muted">Try adjusting your date range or filters</small>
+        </div>
+    }
+</div>
+
+@if (Model.Any())
+{
+    <!-- Summary Cards -->
+    <div class="row g-4 mt-4">
+        <div class="col-md-3">
+            <div class="stat-card primary">
+                <div class="stat-header">
+                    <div>
+                        <div class="stat-value">@Model.Count</div>
+                        <div class="stat-label">Total Reports</div>
+                    </div>
+                    <div class="stat-icon primary">
+                        <i class="bi bi-file-text-fill"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="stat-card success">
+                <div class="stat-header">
+                    <div>
+                        <div class="stat-value">@Model.Count(r => r.ServiceType == "Routine")</div>
+                        <div class="stat-label">Routine Services</div>
+                    </div>
+                    <div class="stat-icon success">
+                        <i class="bi bi-arrow-repeat"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="stat-card danger">
+                <div class="stat-header">
+                    <div>
+                        <div class="stat-value">@Model.Count(r => r.ServiceType == "Emergency")</div>
+                        <div class="stat-label">Emergency Calls</div>
+                    </div>
+                    <div class="stat-icon danger">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="stat-card info">
+                <div class="stat-header">
+                    <div>
+                        <div class="stat-value">@Model.Select(r => r.LocationId).Distinct().Count()</div>
+                        <div class="stat-label">Locations Serviced</div>
+                    </div>
+                    <div class="stat-icon info">
+                        <i class="bi bi-geo-alt-fill"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 8px;
+        padding: 8px 16px;
+        font-weight: 600;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .form-control, .form-select {
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        padding: 10px 14px;
+        transition: all 0.3s;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.15);
+    }
+
+    .card {
+        border: none !important;
+    }
+</style>

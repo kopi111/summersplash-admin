@@ -1,0 +1,325 @@
+@model SummerSplashWeb.Models.JobLocation
+@{
+    ViewData["Title"] = "Add New Location";
+}
+
+<div class="content-area">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="bi bi-geo-alt-fill me-2"></i>Add New Location</h2>
+            <p class="text-muted mb-0">Create a new job location with map coordinates</p>
+        </div>
+        <div>
+            <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to Locations
+            </a>
+        </div>
+    </div>
+
+    <form asp-action="Create" method="post" id="locationForm">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+        <div class="row">
+            <!-- Left Column - Form Fields -->
+            <div class="col-lg-5">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <i class="bi bi-building me-2"></i>Location Details
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label asp-for="Name" class="form-label">
+                                    <i class="bi bi-tag me-1"></i>Location Name <span class="text-danger">*</span>
+                                </label>
+                                <input asp-for="Name" class="form-control" placeholder="e.g., Sunset Community Pool" required />
+                                <span asp-validation-for="Name" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-12">
+                                <label asp-for="Address" class="form-label">
+                                    <i class="bi bi-signpost me-1"></i>Address <span class="text-danger">*</span>
+                                </label>
+                                <div class="position-relative">
+                                    <input asp-for="Address" class="form-control" id="addressInput" placeholder="Start typing to search US addresses..." required autocomplete="off" />
+                                    <div id="addressSuggestions" class="dropdown-menu w-100" style="display: none; max-height: 300px; overflow-y: auto;"></div>
+                                </div>
+                                <span asp-validation-for="Address" class="text-danger"></span>
+                                <small class="text-muted">Type to search addresses - will auto-fill coordinates</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header bg-info text-white">
+                        <i class="bi bi-person me-2"></i>Contact Information
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label asp-for="ContactName" class="form-label">Contact Person</label>
+                                <input asp-for="ContactName" class="form-control" placeholder="e.g., John Smith" />
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="ContactPhone" class="form-label">Phone</label>
+                                <input asp-for="ContactPhone" class="form-control" placeholder="e.g., 555-123-4567" />
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="ContactEmail" class="form-label">Email</label>
+                                <input asp-for="ContactEmail" type="email" class="form-control" placeholder="e.g., contact@email.com" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header bg-success text-white">
+                        <i class="bi bi-crosshair me-2"></i>Map Coordinates
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            Click on the map or search an address to set coordinates.
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label asp-for="Latitude" class="form-label">
+                                    <i class="bi bi-geo me-1"></i>Latitude
+                                </label>
+                                <input asp-for="Latitude" class="form-control" id="latitudeInput" readonly placeholder="Click map or search address" />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="Longitude" class="form-label">
+                                    <i class="bi bi-geo me-1"></i>Longitude
+                                </label>
+                                <input asp-for="Longitude" class="form-control" id="longitudeInput" readonly placeholder="Click map or search address" />
+                            </div>
+
+                            <div class="col-12">
+                                <button type="button" class="btn btn-outline-primary w-100" onclick="searchAddress()">
+                                    <i class="bi bi-search me-2"></i>Search Address on Map
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column - Map -->
+            <div class="col-lg-7">
+                <div class="card sticky-top" style="top: 20px;">
+                    <div class="card-header bg-dark text-white">
+                        <i class="bi bi-map me-2"></i>Select Location on Map
+                        <span class="badge bg-warning text-dark float-end">Click to set location</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="map" style="height: 500px; width: 100%;"></div>
+                    </div>
+                    <div class="card-footer">
+                        <small class="text-muted">
+                            <i class="bi bi-hand-index me-1"></i>Click on the map to set the exact location
+                        </small>
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex justify-content-between">
+                    <a href="@Url.Action("Index")" class="btn btn-secondary btn-lg">
+                        <i class="bi bi-x-circle me-1"></i>Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                        <i class="bi bi-check-circle me-1"></i>Create Location
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <!-- Leaflet CSS and JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        let map;
+        let marker;
+        let searchTimeout;
+        const defaultLat = 39.8283;
+        const defaultLng = -98.5795;
+
+        // Address autocomplete using OpenStreetMap Nominatim API
+        document.getElementById('addressInput').addEventListener('input', function(e) {
+            clearTimeout(searchTimeout);
+            const query = e.target.value;
+            const suggestionsDiv = document.getElementById('addressSuggestions');
+
+            if (query.length < 3) {
+                suggestionsDiv.style.display = 'none';
+                return;
+            }
+
+            searchTimeout = setTimeout(() => {
+                const url = 'https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&countrycodes=us&limit=8&q=' + encodeURIComponent(query);
+
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data && data.length > 0) {
+                            let html = '';
+                            data.forEach((result) => {
+                                html += '<a class="dropdown-item address-suggestion" href="#" ' +
+                                    'data-address="' + result.display_name.split(',').slice(0, 3).join(',') + '" ' +
+                                    'data-lat="' + result.lat + '" ' +
+                                    'data-lng="' + result.lon + '">' +
+                                    '<div class="d-flex align-items-center">' +
+                                    '<i class="bi bi-geo-alt text-primary me-2"></i>' +
+                                    '<div>' + result.display_name.substring(0, 70) + (result.display_name.length > 70 ? '...' : '') + '</div>' +
+                                    '</div></a>';
+                            });
+                            suggestionsDiv.innerHTML = html;
+                            suggestionsDiv.style.display = 'block';
+
+                            document.querySelectorAll('.address-suggestion').forEach(item => {
+                                item.addEventListener('click', function(e) {
+                                    e.preventDefault();
+                                    selectAddress(this);
+                                });
+                            });
+                        } else {
+                            suggestionsDiv.innerHTML = '<div class="dropdown-item text-muted">No addresses found</div>';
+                            suggestionsDiv.style.display = 'block';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error searching addresses:', error);
+                        suggestionsDiv.style.display = 'none';
+                    });
+            }, 400);
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('#addressInput') && !e.target.closest('#addressSuggestions')) {
+                document.getElementById('addressSuggestions').style.display = 'none';
+            }
+        });
+
+        function selectAddress(element) {
+            document.getElementById('addressInput').value = element.dataset.address;
+            document.getElementById('addressSuggestions').style.display = 'none';
+
+            const lat = parseFloat(element.dataset.lat);
+            const lng = parseFloat(element.dataset.lng);
+            if (lat && lng) {
+                setLocation(lat, lng);
+                map.setView([lat, lng], 17);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initMap();
+        });
+
+        function initMap() {
+            var usBounds = L.latLngBounds(
+                L.latLng(24.396308, -125.000000),
+                L.latLng(49.384358, -66.934570)
+            );
+
+            map = L.map('map', {
+                maxBounds: usBounds,
+                maxBoundsViscosity: 1.0,
+                minZoom: 4,
+                maxZoom: 18
+            }).setView([defaultLat, defaultLng], 5);
+
+            map.fitBounds(usBounds);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap',
+                bounds: usBounds
+            }).addTo(map);
+
+            map.on('click', function(e) {
+                setLocation(e.latlng.lat, e.latlng.lng);
+            });
+        }
+
+        function setLocation(lat, lng) {
+            document.getElementById('latitudeInput').value = lat.toFixed(6);
+            document.getElementById('longitudeInput').value = lng.toFixed(6);
+
+            if (marker) {
+                map.removeLayer(marker);
+            }
+
+            marker = L.marker([lat, lng], {
+                draggable: true
+            }).addTo(map);
+
+            marker.on('dragend', function(e) {
+                const pos = e.target.getLatLng();
+                setLocation(pos.lat, pos.lng);
+            });
+
+            marker.bindPopup('<b>Job Location</b><br>Lat: ' + lat.toFixed(6) + '<br>Lng: ' + lng.toFixed(6)).openPopup();
+        }
+
+        function searchAddress() {
+            const address = document.getElementById('addressInput').value;
+
+            if (!address.trim()) {
+                alert('Please enter an address to search.');
+                return;
+            }
+
+            const url = 'https://nominatim.openstreetmap.org/search?format=json&countrycodes=us&q=' + encodeURIComponent(address);
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.length > 0) {
+                        const result = data[0];
+                        const lat = parseFloat(result.lat);
+                        const lng = parseFloat(result.lon);
+                        setLocation(lat, lng);
+                        map.setView([lat, lng], 17);
+                    } else {
+                        alert('Address not found. Please try a different address or click directly on the map.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Geocoding error:', error);
+                    alert('Error searching for address. Please try again or click directly on the map.');
+                });
+        }
+
+        document.getElementById('locationForm').addEventListener('submit', function(e) {
+            const lat = document.getElementById('latitudeInput').value;
+            const lng = document.getElementById('longitudeInput').value;
+
+            if (!lat || !lng) {
+                e.preventDefault();
+                alert('Please select a location on the map or search for an address to set the coordinates.');
+                return false;
+            }
+        });
+    </script>
+
+    <style>
+        .leaflet-container {
+            font-family: inherit;
+        }
+        #map {
+            border-radius: 0;
+        }
+        .sticky-top {
+            z-index: 1000;
+        }
+    </style>
+}

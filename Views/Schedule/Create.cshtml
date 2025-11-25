@@ -1,0 +1,247 @@
+@model SummerSplashWeb.Models.Schedule
+@using SummerSplashWeb.Models
+@{
+    ViewData["Title"] = "Create Schedule";
+    var users = ViewBag.Users as List<User> ?? new List<User>();
+    var locations = ViewBag.Locations as List<JobLocation> ?? new List<JobLocation>();
+    var selectedDate = ViewBag.SelectedDate as DateTime? ?? DateTime.Now;
+    var selectedUserId = ViewBag.SelectedUserId as int?;
+}
+
+<div class="content-area">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="bi bi-calendar-plus me-2"></i>Create Schedule</h2>
+            <p class="text-muted mb-0">Add a new employee schedule</p>
+        </div>
+        <div>
+            <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to Schedule
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <form asp-action="Create" method="post">
+                @Html.AntiForgeryToken()
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="UserId" class="form-label">
+                            <i class="bi bi-person-circle me-1"></i>Employee <span class="text-danger">*</span>
+                        </label>
+                        <select asp-for="UserId" class="form-select" required>
+                            <option value="">-- Select Employee --</option>
+                            @foreach (var user in users.Where(u => u.IsActive).OrderBy(u => u.FirstName))
+                            {
+                                <option value="@user.UserId" selected="@(selectedUserId.HasValue && user.UserId == selectedUserId.Value)">
+                                    @user.FirstName @user.LastName (@user.Position)
+                                </option>
+                            }
+                        </select>
+                        <span asp-validation-for="UserId" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="LocationId" class="form-label">
+                            <i class="bi bi-geo-alt me-1"></i>Location <span class="text-danger">*</span>
+                        </label>
+                        <select asp-for="LocationId" class="form-select" required>
+                            <option value="">-- Select Location --</option>
+                            @foreach (var location in locations.Where(l => l.IsActive).OrderBy(l => l.Name))
+                            {
+                                <option value="@location.LocationId">@location.Name</option>
+                            }
+                        </select>
+                        <span asp-validation-for="LocationId" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="ScheduledDate" class="form-label">
+                            <i class="bi bi-calendar-date me-1"></i>Date <span class="text-danger">*</span>
+                        </label>
+                        <input asp-for="ScheduledDate" type="date" class="form-control" value="@selectedDate.ToString("yyyy-MM-dd")" required />
+                        <span asp-validation-for="ScheduledDate" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="SupervisorId" class="form-label">
+                            <i class="bi bi-person-badge me-1"></i>Supervisor (Optional)
+                        </label>
+                        <select asp-for="SupervisorId" class="form-select">
+                            <option value="">-- No Supervisor --</option>
+                            @foreach (var user in users.Where(u => u.IsActive && (u.Position == "Manager" || u.Position == "Supervisor")).OrderBy(u => u.FirstName))
+                            {
+                                <option value="@user.UserId">@user.FirstName @user.LastName</option>
+                            }
+                        </select>
+                        <span asp-validation-for="SupervisorId" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="StartTime" class="form-label">
+                            <i class="bi bi-clock me-1"></i>Start Time <span class="text-danger">*</span>
+                        </label>
+                        <input asp-for="StartTime" type="time" class="form-control" id="startTime" onchange="calculateHours()" required />
+                        <span asp-validation-for="StartTime" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="EndTime" class="form-label">
+                            <i class="bi bi-clock-fill me-1"></i>End Time <span class="text-danger">*</span>
+                        </label>
+                        <input asp-for="EndTime" type="time" class="form-control" id="endTime" onchange="calculateHours()" required />
+                        <span asp-validation-for="EndTime" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-12">
+                        <div class="alert alert-info" id="hoursDisplay" style="display: none;">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>Scheduled Hours:</strong> <span id="hoursValue">0</span> hours
+                        </div>
+                    </div>
+
+                    <div class="col-md-12">
+                        <label asp-for="Notes" class="form-label">
+                            <i class="bi bi-sticky me-1"></i>Notes (Optional)
+                        </label>
+                        <textarea asp-for="Notes" class="form-control" rows="3" placeholder="Add any additional notes or instructions..." id="notesInput"></textarea>
+                        <span asp-validation-for="Notes" class="text-danger"></span>
+                    </div>
+
+                    <!-- Quick Multi-Day Schedule Buttons -->
+                    <div class="col-md-12">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title mb-3">
+                                    <i class="bi bi-calendar-range me-2"></i>Quick Schedule - Create Multiple Days
+                                </h6>
+                                <p class="text-muted small mb-3">Fill in the form above, then click a button to create schedules for consecutive days starting from the selected date.</p>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button type="button" class="btn btn-outline-primary" onclick="submitMultiDay(3)">
+                                        <i class="bi bi-3-circle me-1"></i>3 Days
+                                    </button>
+                                    <button type="button" class="btn btn-outline-primary" onclick="submitMultiDay(5)">
+                                        <i class="bi bi-5-circle me-1"></i>5 Days
+                                    </button>
+                                    <button type="button" class="btn btn-outline-success" onclick="submitMultiDay(7)">
+                                        <i class="bi bi-calendar-week me-1"></i>7 Days (1 Week)
+                                    </button>
+                                    <button type="button" class="btn btn-outline-info" onclick="submitMultiDay(14)">
+                                        <i class="bi bi-calendar2-week me-1"></i>14 Days (2 Weeks)
+                                    </button>
+                                    <button type="button" class="btn btn-outline-warning" onclick="submitMultiDay(21)">
+                                        <i class="bi bi-calendar3 me-1"></i>21 Days (3 Weeks)
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex justify-content-between">
+                    <a href="@Url.Action("Index")" class="btn btn-secondary">
+                        <i class="bi bi-x-circle me-1"></i>Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle me-1"></i>Create Single Schedule
+                    </button>
+                </div>
+            </form>
+
+            <!-- Hidden form for multi-day schedule creation -->
+            <form id="multiDayForm" asp-action="CreateMultiDay" method="post" style="display: none;">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="userId" id="multiDayUserId" />
+                <input type="hidden" name="locationId" id="multiDayLocationId" />
+                <input type="hidden" name="supervisorId" id="multiDaySupervisorId" />
+                <input type="hidden" name="startDate" id="multiDayStartDate" />
+                <input type="hidden" name="startTime" id="multiDayStartTime" />
+                <input type="hidden" name="endTime" id="multiDayEndTime" />
+                <input type="hidden" name="notes" id="multiDayNotes" />
+                <input type="hidden" name="numberOfDays" id="multiDayNumberOfDays" />
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        function calculateHours() {
+            const startTime = document.getElementById('startTime').value;
+            const endTime = document.getElementById('endTime').value;
+
+            if (startTime && endTime) {
+                const start = new Date('2000-01-01 ' + startTime);
+                const end = new Date('2000-01-01 ' + endTime);
+                const hours = (end - start) / (1000 * 60 * 60);
+
+                if (hours > 0) {
+                    document.getElementById('hoursValue').textContent = hours.toFixed(2);
+                    document.getElementById('hoursDisplay').style.display = 'block';
+                    document.getElementById('hoursDisplay').className = 'alert alert-success';
+                } else {
+                    document.getElementById('hoursValue').textContent = hours.toFixed(2);
+                    document.getElementById('hoursDisplay').style.display = 'block';
+                    document.getElementById('hoursDisplay').className = 'alert alert-warning';
+                }
+            } else {
+                document.getElementById('hoursDisplay').style.display = 'none';
+            }
+        }
+
+        function submitMultiDay(numberOfDays) {
+            // Get form values
+            const userId = document.getElementById('UserId').value;
+            const locationId = document.getElementById('LocationId').value;
+            const supervisorId = document.getElementById('SupervisorId').value;
+            const startDate = document.getElementById('ScheduledDate').value;
+            const startTime = document.getElementById('startTime').value;
+            const endTime = document.getElementById('endTime').value;
+            const notes = document.getElementById('notesInput').value;
+
+            // Validate required fields
+            if (!userId) {
+                alert('Please select an employee.');
+                return;
+            }
+            if (!locationId) {
+                alert('Please select a location.');
+                return;
+            }
+            if (!startDate) {
+                alert('Please select a start date.');
+                return;
+            }
+            if (!startTime) {
+                alert('Please select a start time.');
+                return;
+            }
+            if (!endTime) {
+                alert('Please select an end time.');
+                return;
+            }
+
+            // Confirm the action
+            if (!confirm(`Create ${numberOfDays} schedules starting from ${startDate}?`)) {
+                return;
+            }
+
+            // Set hidden form values
+            document.getElementById('multiDayUserId').value = userId;
+            document.getElementById('multiDayLocationId').value = locationId;
+            document.getElementById('multiDaySupervisorId').value = supervisorId || '';
+            document.getElementById('multiDayStartDate').value = startDate;
+            document.getElementById('multiDayStartTime').value = startTime;
+            document.getElementById('multiDayEndTime').value = endTime;
+            document.getElementById('multiDayNotes').value = notes;
+            document.getElementById('multiDayNumberOfDays').value = numberOfDays;
+
+            // Submit the hidden form
+            document.getElementById('multiDayForm').submit();
+        }
+    </script>
+}

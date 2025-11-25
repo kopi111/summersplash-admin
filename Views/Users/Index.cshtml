@@ -1,0 +1,227 @@
+@model List<SummerSplashWeb.Models.User>
+@{
+    ViewData["Title"] = "User Management";
+}
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- Filters -->
+<div class="card mb-4" style="border: none; border-radius: 15px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);">
+    <div class="card-body">
+        <form method="get" asp-action="Index" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">
+                    <i class="bi bi-search me-1"></i> Search
+                </label>
+                <input type="text"
+                       class="form-control"
+                       name="search"
+                       value="@ViewBag.Search"
+                       placeholder="Search by name or email...">
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">
+                    <i class="bi bi-briefcase me-1"></i> Position
+                </label>
+                <select class="form-select" name="position">
+                    <option value="">All Positions</option>
+                    @if (ViewBag.Positions != null)
+                    {
+                        foreach (var pos in (List<string>)ViewBag.Positions)
+                        {
+                            <option value="@pos" selected="@(ViewBag.Position == pos)">@pos</option>
+                        }
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">
+                    <i class="bi bi-toggle-on me-1"></i> Status
+                </label>
+                <select class="form-select" name="active">
+                    <option value="">All Users</option>
+                    <option value="true" selected="@(ViewBag.Active == true)">Active Only</option>
+                    <option value="false" selected="@(ViewBag.Active == false)">Inactive Only</option>
+                </select>
+            </div>
+
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-funnel me-1"></i> Filter
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Users Table -->
+<div class="custom-table">
+    <div style="padding: 20px; border-bottom: 1px solid #f1f3f5; display: flex; justify-content: space-between; align-items: center;">
+        <h5 class="mb-0" style="color: #344767; font-weight: 700;">
+            <i class="bi bi-people me-2"></i>
+            All Users
+        </h5>
+        <span class="badge bg-primary" style="font-size: 14px;">@Model.Count users</span>
+    </div>
+
+    @if (Model.Any())
+    {
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Position</th>
+                    <th>Phone</th>
+                    <th>Status</th>
+                    <th>Approval</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var user in Model)
+                {
+                    <tr>
+                        <td>
+                            <div style="font-weight: 600; color: #344767;">
+                                @user.FirstName @user.LastName
+                            </div>
+                        </td>
+                        <td>
+                            <small class="text-muted">
+                                <i class="bi bi-envelope me-1"></i>
+                                @user.Email
+                            </small>
+                        </td>
+                        <td>
+                            <span class="badge bg-info">@(user.Position ?? "Not Set")</span>
+                        </td>
+                        <td>
+                            <small class="text-muted">
+                                @if (!string.IsNullOrEmpty(user.PhoneNumber))
+                                {
+                                    <i class="bi bi-phone me-1"></i>
+                                    @user.PhoneNumber
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </small>
+                        </td>
+                        <td>
+                            @if (user.IsActive)
+                            {
+                                <span class="badge bg-success">
+                                    <i class="bi bi-check-circle me-1"></i>Active
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">
+                                    <i class="bi bi-x-circle me-1"></i>Inactive
+                                </span>
+                            }
+                        </td>
+                        <td>
+                            @if (user.IsApproved)
+                            {
+                                <span class="badge bg-success">
+                                    <i class="bi bi-shield-check me-1"></i>Approved
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning">
+                                    <i class="bi bi-clock me-1"></i>Pending
+                                </span>
+                            }
+                        </td>
+                        <td>
+                            <a href="@Url.Action("Details", new { id = user.UserId })"
+                               class="btn btn-sm btn-primary">
+                                <i class="bi bi-eye me-1"></i>View
+                            </a>
+                            <a href="@Url.Action("Edit", new { id = user.UserId })"
+                               class="btn btn-sm btn-secondary">
+                                <i class="bi bi-pencil me-1"></i>Edit
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <div style="padding: 60px; text-align: center; color: #7b809a;">
+            <i class="bi bi-people" style="font-size: 64px; opacity: 0.3;"></i>
+            <p class="mt-3 mb-0">No users found</p>
+            <small class="text-muted">Try adjusting your filters</small>
+        </div>
+    }
+</div>
+
+<style>
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 8px;
+        padding: 8px 16px;
+        font-weight: 600;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-secondary {
+        background: #6c757d;
+        border: none;
+        border-radius: 8px;
+        padding: 8px 16px;
+        font-weight: 600;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .btn-secondary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4);
+    }
+
+    .form-control, .form-select {
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        padding: 10px 14px;
+        transition: all 0.3s;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.15);
+    }
+
+    .card {
+        border: none !important;
+    }
+</style>

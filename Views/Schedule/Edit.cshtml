@@ -1,0 +1,218 @@
+@model SummerSplashWeb.Models.Schedule
+@using SummerSplashWeb.Models
+@{
+    ViewData["Title"] = "Edit Schedule";
+    var users = ViewBag.Users as List<User> ?? new List<User>();
+    var locations = ViewBag.Locations as List<JobLocation> ?? new List<JobLocation>();
+}
+
+<div class="content-area">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="bi bi-pencil-square me-2"></i>Edit Schedule</h2>
+            <p class="text-muted mb-0">Update employee schedule details</p>
+        </div>
+        <div>
+            <a href="@Url.Action("Index", new { date = Model.ScheduledDate })" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to Schedule
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <form asp-action="Edit" asp-route-id="@Model.ScheduleId" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="ScheduleId" />
+                <input type="hidden" asp-for="CreatedAt" />
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="UserId" class="form-label">
+                            <i class="bi bi-person-circle me-1"></i>Employee <span class="text-danger">*</span>
+                        </label>
+                        <select asp-for="UserId" class="form-select" required>
+                            <option value="">-- Select Employee --</option>
+                            @foreach (var user in users.Where(u => u.IsActive).OrderBy(u => u.FirstName))
+                            {
+                                <option value="@user.UserId" selected="@(user.UserId == Model.UserId)">
+                                    @user.FirstName @user.LastName (@user.Position)
+                                </option>
+                            }
+                        </select>
+                        <span asp-validation-for="UserId" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="LocationId" class="form-label">
+                            <i class="bi bi-geo-alt me-1"></i>Location <span class="text-danger">*</span>
+                        </label>
+                        <select asp-for="LocationId" class="form-select" required>
+                            <option value="">-- Select Location --</option>
+                            @foreach (var location in locations.Where(l => l.IsActive).OrderBy(l => l.Name))
+                            {
+                                <option value="@location.LocationId" selected="@(location.LocationId == Model.LocationId)">
+                                    @location.Name
+                                </option>
+                            }
+                        </select>
+                        <span asp-validation-for="LocationId" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="ScheduledDate" class="form-label">
+                            <i class="bi bi-calendar-date me-1"></i>Date <span class="text-danger">*</span>
+                        </label>
+                        <input asp-for="ScheduledDate" type="date" class="form-control" required />
+                        <span asp-validation-for="ScheduledDate" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="SupervisorId" class="form-label">
+                            <i class="bi bi-person-badge me-1"></i>Supervisor (Optional)
+                        </label>
+                        <select asp-for="SupervisorId" class="form-select">
+                            <option value="">-- No Supervisor --</option>
+                            @foreach (var user in users.Where(u => u.IsActive && (u.Position == "Manager" || u.Position == "Supervisor")).OrderBy(u => u.FirstName))
+                            {
+                                <option value="@user.UserId" selected="@(user.UserId == Model.SupervisorId)">
+                                    @user.FirstName @user.LastName
+                                </option>
+                            }
+                        </select>
+                        <span asp-validation-for="SupervisorId" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="StartTime" class="form-label">
+                            <i class="bi bi-clock me-1"></i>Start Time <span class="text-danger">*</span>
+                        </label>
+                        <input asp-for="StartTime" type="time" class="form-control" id="startTime" onchange="calculateHours()"
+                               value="@Model.StartTime?.ToString(@"hh\:mm")" required />
+                        <span asp-validation-for="StartTime" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="EndTime" class="form-label">
+                            <i class="bi bi-clock-fill me-1"></i>End Time <span class="text-danger">*</span>
+                        </label>
+                        <input asp-for="EndTime" type="time" class="form-control" id="endTime" onchange="calculateHours()"
+                               value="@Model.EndTime?.ToString(@"hh\:mm")" required />
+                        <span asp-validation-for="EndTime" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-12">
+                        <div class="alert alert-info" id="hoursDisplay">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>Scheduled Hours:</strong> <span id="hoursValue">@Model.ScheduledHours.ToString("F2")</span> hours
+                        </div>
+                    </div>
+
+                    <div class="col-md-12">
+                        <label asp-for="Notes" class="form-label">
+                            <i class="bi bi-sticky me-1"></i>Notes (Optional)
+                        </label>
+                        <textarea asp-for="Notes" class="form-control" rows="3" placeholder="Add any additional notes or instructions..."></textarea>
+                        <span asp-validation-for="Notes" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex justify-content-between">
+                    <div>
+                        <a href="@Url.Action("Index", new { date = Model.ScheduledDate })" class="btn btn-secondary">
+                            <i class="bi bi-x-circle me-1"></i>Cancel
+                        </a>
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-danger me-2" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                            <i class="bi bi-trash me-1"></i>Delete
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-1"></i>Update Schedule
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-body">
+            <h6 class="text-muted"><i class="bi bi-info-circle me-2"></i>Schedule Information</h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <small class="text-muted">Created:</small>
+                    <p>@Model.CreatedAt.ToString("MMM d, yyyy h:mm tt")</p>
+                </div>
+                <div class="col-md-6">
+                    <small class="text-muted">Schedule ID:</small>
+                    <p>#@Model.ScheduleId</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this schedule?</p>
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Warning:</strong> This action cannot be undone.
+                </div>
+                <ul>
+                    <li><strong>Employee:</strong> @Model.UserName</li>
+                    <li><strong>Date:</strong> @Model.ScheduledDate.ToString("MMM d, yyyy")</li>
+                    <li><strong>Time:</strong> @Model.TimeRange</li>
+                    <li><strong>Location:</strong> @Model.LocationName</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form asp-action="Delete" asp-route-id="@Model.ScheduleId" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i>Delete Schedule
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        function calculateHours() {
+            const startTime = document.getElementById('startTime').value;
+            const endTime = document.getElementById('endTime').value;
+
+            if (startTime && endTime) {
+                const start = new Date('2000-01-01 ' + startTime);
+                const end = new Date('2000-01-01 ' + endTime);
+                const hours = (end - start) / (1000 * 60 * 60);
+
+                if (hours > 0) {
+                    document.getElementById('hoursValue').textContent = hours.toFixed(2);
+                    document.getElementById('hoursDisplay').className = 'alert alert-success';
+                } else {
+                    document.getElementById('hoursValue').textContent = hours.toFixed(2);
+                    document.getElementById('hoursDisplay').className = 'alert alert-warning';
+                }
+            }
+        }
+
+        // Calculate on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            calculateHours();
+        });
+    </script>
+}

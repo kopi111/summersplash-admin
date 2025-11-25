@@ -1,0 +1,370 @@
+@using SummerSplashWeb.Models
+@{
+    ViewData["Title"] = "Create 4-Week Schedule";
+    var startDate = (DateTime)ViewBag.StartDate;
+    var users = ViewBag.Users as List<User> ?? new List<User>();
+    var locations = ViewBag.Locations as List<JobLocation> ?? new List<JobLocation>();
+    var existingSchedules = ViewBag.ExistingSchedules as List<Schedule> ?? new List<Schedule>();
+}
+
+<div class="content-area">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="bi bi-calendar-plus me-2"></i>Create 4-Week Schedule</h2>
+            <p class="text-muted mb-0">Set up employee schedule for @startDate.ToString("MMM d") - @startDate.AddDays(27).ToString("MMM d, yyyy")</p>
+        </div>
+        <div>
+            <a href="@Url.Action("Index", new { view = "fourweeks", date = startDate })" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to Schedule
+            </a>
+        </div>
+    </div>
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i>@TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <form asp-action="CreateFourWeek" method="post" id="fourWeekForm">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="startDate" value="@startDate.ToString("yyyy-MM-dd")" />
+
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-person-gear me-2"></i>Employee & Location</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="userId" class="form-label">
+                            <i class="bi bi-person-circle me-1"></i>Select Employee <span class="text-danger">*</span>
+                        </label>
+                        <select name="userId" id="userId" class="form-select" required onchange="loadExistingSchedules()">
+                            <option value="">-- Choose Employee --</option>
+                            @foreach (var user in users.Where(u => u.IsActive).OrderBy(u => u.FirstName))
+                            {
+                                <option value="@user.UserId">@user.FirstName @user.LastName (@user.Position)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="locationId" class="form-label">
+                            <i class="bi bi-geo-alt me-1"></i>Select Location <span class="text-danger">*</span>
+                        </label>
+                        <select name="locationId" id="locationId" class="form-select" required>
+                            <option value="">-- Choose Location --</option>
+                            @foreach (var location in locations.Where(l => l.IsActive).OrderBy(l => l.Name))
+                            {
+                                <option value="@location.LocationId">@location.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="supervisorId" class="form-label">
+                            <i class="bi bi-person-badge me-1"></i>Supervisor (Optional)
+                        </label>
+                        <select name="supervisorId" id="supervisorId" class="form-select">
+                            <option value="">-- No Supervisor --</option>
+                            @foreach (var user in users.Where(u => u.IsActive && (u.Position == "Manager" || u.Position == "Supervisor")).OrderBy(u => u.FirstName))
+                            {
+                                <option value="@user.UserId">@user.FirstName @user.LastName</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-calendar4-week me-2"></i>4-Week Schedule</h5>
+                <div>
+                    <button type="button" class="btn btn-light btn-sm me-2" onclick="applyToAll()">
+                        <i class="bi bi-copy me-1"></i>Apply Pattern to All Days
+                    </button>
+                    <button type="button" class="btn btn-light btn-sm" onclick="clearAll()">
+                        <i class="bi bi-x-circle me-1"></i>Clear All
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Default Start Time</label>
+                        <input type="time" id="defaultStartTime" class="form-control" value="09:00" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Default End Time</label>
+                        <input type="time" id="defaultEndTime" class="form-control" value="17:00" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Apply To</label>
+                        <select id="applyToPattern" class="form-select">
+                            <option value="all">All Days</option>
+                            <option value="weekdays">Weekdays Only (Mon-Fri)</option>
+                            <option value="weekends">Weekends Only (Sat-Sun)</option>
+                        </select>
+                    </div>
+                </div>
+
+                @for (var weekNum = 0; weekNum < 4; weekNum++)
+                {
+                    var weekStart = startDate.AddDays(weekNum * 7);
+                    var weekEnd = weekStart.AddDays(6);
+
+                    <div class="mb-4">
+                        <h6 class="bg-light p-2 border-bottom">
+                            <i class="bi bi-calendar-week me-2"></i>Week @(weekNum + 1): @weekStart.ToString("MMM d") - @weekEnd.ToString("MMM d, yyyy")
+                        </h6>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-sm">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 50px;">Schedule</th>
+                                        <th style="width: 120px;">Date</th>
+                                        <th>Start Time</th>
+                                        <th>End Time</th>
+                                        <th>Notes</th>
+                                        <th style="width: 80px;">Hours</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (var day = 0; day < 7; day++)
+                                    {
+                                        var date = weekStart.AddDays(day);
+                                        var dayIndex = weekNum * 7 + day;
+                                        var isWeekday = date.DayOfWeek != DayOfWeek.Saturday && date.DayOfWeek != DayOfWeek.Sunday;
+                                        var existingSchedule = existingSchedules.FirstOrDefault(s => s.ScheduledDate.Date == date.Date);
+
+                                        <tr class="@(date.Date == DateTime.Now.Date ? "table-primary" : "")">
+                                            <td class="text-center">
+                                                <input type="checkbox"
+                                                       name="daySchedules[@dayIndex].IsScheduled"
+                                                       id="schedule_@dayIndex"
+                                                       class="form-check-input schedule-checkbox"
+                                                       onchange="toggleRow(@dayIndex)"
+                                                       @(existingSchedule != null ? "checked" : "") />
+                                                <input type="hidden" name="daySchedules[@dayIndex].Date" value="@date.ToString("yyyy-MM-dd")" />
+                                            </td>
+                                            <td>
+                                                <strong>@date.ToString("ddd")</strong><br />
+                                                <small class="text-muted">@date.ToString("MMM d")</small>
+                                            </td>
+                                            <td>
+                                                <input type="time"
+                                                       name="daySchedules[@dayIndex].StartTime"
+                                                       id="start_@dayIndex"
+                                                       class="form-control form-control-sm start-time"
+                                                       value="@(existingSchedule?.StartTime?.ToString(@"hh\:mm") ?? "")"
+                                                       onchange="calculateHours(@dayIndex)"
+                                                       @(existingSchedule == null ? "disabled" : "") />
+                                            </td>
+                                            <td>
+                                                <input type="time"
+                                                       name="daySchedules[@dayIndex].EndTime"
+                                                       id="end_@dayIndex"
+                                                       class="form-control form-control-sm end-time"
+                                                       value="@(existingSchedule?.EndTime?.ToString(@"hh\:mm") ?? "")"
+                                                       onchange="calculateHours(@dayIndex)"
+                                                       @(existingSchedule == null ? "disabled" : "") />
+                                            </td>
+                                            <td>
+                                                <input type="text"
+                                                       name="daySchedules[@dayIndex].Notes"
+                                                       id="notes_@dayIndex"
+                                                       class="form-control form-control-sm"
+                                                       placeholder="Optional notes"
+                                                       value="@(existingSchedule?.Notes ?? "")"
+                                                       @(existingSchedule == null ? "disabled" : "") />
+                                            </td>
+                                            <td class="text-center">
+                                                <span id="hours_@dayIndex" class="badge bg-secondary">0h</span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
+
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Tip:</strong> Check the checkbox for each day you want to schedule, then set the start and end times.
+                    Use the "Apply Pattern to All Days" button to quickly fill in times for multiple days.
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span id="totalScheduledDays" class="text-muted">0 days scheduled</span>
+                        <span class="ms-3" id="totalHours"></span>
+                    </div>
+                    <div>
+                        <a href="@Url.Action("Index", new { view = "fourweeks", date = startDate })" class="btn btn-secondary me-2">
+                            <i class="bi bi-x-circle me-1"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-1"></i>Create Schedules
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    function toggleRow(index) {
+        const checkbox = document.getElementById('schedule_' + index);
+        const startInput = document.getElementById('start_' + index);
+        const endInput = document.getElementById('end_' + index);
+        const notesInput = document.getElementById('notes_' + index);
+
+        const isChecked = checkbox.checked;
+        startInput.disabled = !isChecked;
+        endInput.disabled = !isChecked;
+        notesInput.disabled = !isChecked;
+
+        if (isChecked && !startInput.value && !endInput.value) {
+            startInput.value = document.getElementById('defaultStartTime').value;
+            endInput.value = document.getElementById('defaultEndTime').value;
+        }
+
+        calculateHours(index);
+        updateTotals();
+    }
+
+    function calculateHours(index) {
+        const startInput = document.getElementById('start_' + index);
+        const endInput = document.getElementById('end_' + index);
+        const hoursDisplay = document.getElementById('hours_' + index);
+        const checkbox = document.getElementById('schedule_' + index);
+
+        if (!checkbox.checked || !startInput.value || !endInput.value) {
+            hoursDisplay.textContent = '0h';
+            hoursDisplay.className = 'badge bg-secondary';
+            return;
+        }
+
+        const start = new Date('2000-01-01 ' + startInput.value);
+        const end = new Date('2000-01-01 ' + endInput.value);
+        const hours = (end - start) / (1000 * 60 * 60);
+
+        hoursDisplay.textContent = hours.toFixed(1) + 'h';
+        hoursDisplay.className = hours > 0 ? 'badge bg-success' : 'badge bg-danger';
+
+        updateTotals();
+    }
+
+    function updateTotals() {
+        let scheduledDays = 0;
+        let totalHours = 0;
+
+        for (let i = 0; i < 28; i++) {
+            const checkbox = document.getElementById('schedule_' + i);
+            if (checkbox && checkbox.checked) {
+                scheduledDays++;
+
+                const startInput = document.getElementById('start_' + i);
+                const endInput = document.getElementById('end_' + i);
+
+                if (startInput.value && endInput.value) {
+                    const start = new Date('2000-01-01 ' + startInput.value);
+                    const end = new Date('2000-01-01 ' + endInput.value);
+                    const hours = (end - start) / (1000 * 60 * 60);
+                    if (hours > 0) totalHours += hours;
+                }
+            }
+        }
+
+        document.getElementById('totalScheduledDays').textContent = scheduledDays + ' days scheduled';
+        document.getElementById('totalHours').innerHTML = '<strong>Total: ' + totalHours.toFixed(1) + ' hours</strong>';
+    }
+
+    function applyToAll() {
+        const startTime = document.getElementById('defaultStartTime').value;
+        const endTime = document.getElementById('defaultEndTime').value;
+        const pattern = document.getElementById('applyToPattern').value;
+
+        if (!startTime || !endTime) {
+            alert('Please set default start and end times');
+            return;
+        }
+
+        for (let i = 0; i < 28; i++) {
+            const dateInput = document.querySelector('input[name="daySchedules[' + i + '].Date"]');
+            const date = new Date(dateInput.value);
+            const dayOfWeek = date.getDay();
+
+            let shouldApply = false;
+            if (pattern === 'all') {
+                shouldApply = true;
+            } else if (pattern === 'weekdays' && dayOfWeek >= 1 && dayOfWeek <= 5) {
+                shouldApply = true;
+            } else if (pattern === 'weekends' && (dayOfWeek === 0 || dayOfWeek === 6)) {
+                shouldApply = true;
+            }
+
+            if (shouldApply) {
+                const checkbox = document.getElementById('schedule_' + i);
+                checkbox.checked = true;
+
+                const startInput = document.getElementById('start_' + i);
+                const endInput = document.getElementById('end_' + i);
+
+                startInput.disabled = false;
+                endInput.disabled = false;
+                startInput.value = startTime;
+                endInput.value = endTime;
+
+                const notesInput = document.getElementById('notes_' + i);
+                notesInput.disabled = false;
+
+                calculateHours(i);
+            }
+        }
+
+        updateTotals();
+    }
+
+    function clearAll() {
+        if (!confirm('Are you sure you want to clear all schedules?')) {
+            return;
+        }
+
+        for (let i = 0; i < 28; i++) {
+            const checkbox = document.getElementById('schedule_' + i);
+            checkbox.checked = false;
+
+            const startInput = document.getElementById('start_' + i);
+            const endInput = document.getElementById('end_' + i);
+            const notesInput = document.getElementById('notes_' + i);
+
+            startInput.disabled = true;
+            endInput.disabled = true;
+            notesInput.disabled = true;
+            startInput.value = '';
+            endInput.value = '';
+            notesInput.value = '';
+
+            calculateHours(i);
+        }
+
+        updateTotals();
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        for (let i = 0; i < 28; i++) {
+            calculateHours(i);
+        }
+        updateTotals();
+    });
+</script>

@@ -1,0 +1,214 @@
+@model List<SummerSplashWeb.Models.Training>
+@{
+    ViewData["Title"] = "Training";
+}
+
+<div class="content-area">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="bi bi-book me-2"></i>Training Programs</h2>
+            <p class="text-muted mb-0">Employee training and certifications</p>
+        </div>
+        <button class="btn btn-primary" disabled>
+            <i class="bi bi-plus-lg me-2"></i>Add Training
+        </button>
+    </div>
+
+    @if (ViewBag.Error != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i>@ViewBag.Error
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle me-2"></i>@TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="row">
+        <!-- Training Overview Cards -->
+        <div class="col-md-3 mb-4">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 text-white-50">Total Programs</h6>
+                            <h2 class="mb-0">@(Model?.Count ?? 0)</h2>
+                        </div>
+                        <i class="bi bi-book" style="font-size: 2.5rem; opacity: 0.3;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-4">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 text-white-50">Completed</h6>
+                            <h2 class="mb-0">@(Model?.Count(t => t.Status == "Completed") ?? 0)</h2>
+                        </div>
+                        <i class="bi bi-check-circle" style="font-size: 2.5rem; opacity: 0.3;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-4">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 text-white-50">In Progress</h6>
+                            <h2 class="mb-0">@(Model?.Count(t => t.Status == "InProgress") ?? 0)</h2>
+                        </div>
+                        <i class="bi bi-hourglass-split" style="font-size: 2.5rem; opacity: 0.3;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-4">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 text-white-50">Certifications</h6>
+                            <h2 class="mb-0">@(Model?.Count(t => t.IsCertification) ?? 0)</h2>
+                        </div>
+                        <i class="bi bi-award" style="font-size: 2.5rem; opacity: 0.3;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Training List -->
+    <div class="card">
+        <div class="card-body">
+            @if (Model == null || !Model.Any())
+            {
+                <div class="text-center py-5">
+                    <i class="bi bi-book" style="font-size: 4rem; color: #ccc;"></i>
+                    <h4 class="mt-3">No Training Programs Found</h4>
+                    <p class="text-muted">Get started by adding your first training program.</p>
+                    <button class="btn btn-primary mt-3" disabled>
+                        <i class="bi bi-plus-lg me-2"></i>Add Training Program
+                    </button>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Employee</th>
+                                <th>Completion Date</th>
+                                <th>Expiry Date</th>
+                                <th>Status</th>
+                                <th>Type</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var training in Model)
+                            {
+                                <tr>
+                                    <td>
+                                        <strong>@training.Title</strong>
+                                        @if (training.IsCertification)
+                                        {
+                                            <i class="bi bi-award text-warning ms-2" title="Certification"></i>
+                                        }
+                                    </td>
+                                    <td>@training.EmployeeName</td>
+                                    <td>
+                                        @if (training.CompletionDate != null)
+                                        {
+                                            @training.CompletionDate.Value.ToString("MM/dd/yyyy")
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (training.ExpiryDate != null)
+                                        {
+                                            var daysUntilExpiry = (training.ExpiryDate.Value - DateTime.Now).Days;
+                                            <span class="@(daysUntilExpiry < 30 ? "text-danger" : daysUntilExpiry < 90 ? "text-warning" : "")">
+                                                @training.ExpiryDate.Value.ToString("MM/dd/yyyy")
+                                            </span>
+                                            @if (daysUntilExpiry < 30 && daysUntilExpiry > 0)
+                                            {
+                                                <br />
+                                                <small class="text-danger">Expires in @daysUntilExpiry days</small>
+                                            }
+                                            else if (daysUntilExpiry <= 0)
+                                            {
+                                                <br />
+                                                <small class="text-danger"><strong>EXPIRED</strong></small>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @switch (training.Status)
+                                        {
+                                            case "Completed":
+                                                <span class="badge bg-success">Completed</span>
+                                                break;
+                                            case "InProgress":
+                                                <span class="badge bg-warning">In Progress</span>
+                                                break;
+                                            case "NotStarted":
+                                                <span class="badge bg-secondary">Not Started</span>
+                                                break;
+                                            default:
+                                                <span class="badge bg-secondary">@training.Status</span>
+                                                break;
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (training.IsCertification)
+                                        {
+                                            <span class="badge bg-info">Certification</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-primary">Training</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button class="btn btn-sm btn-outline-primary" title="View Details" disabled>
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-warning" title="Edit" disabled>
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" title="Delete" disabled>
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>

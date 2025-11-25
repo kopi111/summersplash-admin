@@ -1,0 +1,287 @@
+@model SummerSplashWeb.Models.ServiceTechReport
+@using SummerSplashWeb.Models
+@{
+    ViewData["Title"] = "Create Service Tech Report";
+    var users = ViewBag.Users as List<User> ?? new List<User>();
+    var locations = ViewBag.Locations as List<JobLocation> ?? new List<JobLocation>();
+    var preSelectedUserId = ViewBag.PreSelectedUserId as int?;
+    var preSelectedLocationId = ViewBag.PreSelectedLocationId as int?;
+    var preSelectedClockRecordId = ViewBag.PreSelectedClockRecordId as int?;
+}
+
+<div class="content-area">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="bi bi-file-earmark-check me-2"></i>Create Service Tech Report</h2>
+            <p class="text-muted mb-0">Complete pool service report</p>
+        </div>
+        <div>
+            <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to Reports
+            </a>
+        </div>
+    </div>
+
+    <form asp-action="Create" method="post">
+        @Html.AntiForgeryToken()
+
+        <!-- Basic Information Card -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Basic Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Employee <span class="text-danger">*</span></label>
+                        <select name="UserId" class="form-select" required>
+                            <option value="">-- Select Employee --</option>
+                            @foreach (var user in users.Where(u => u.IsActive).OrderBy(u => u.FirstName))
+                            {
+                                <option value="@user.UserId" selected="@(preSelectedUserId.HasValue && user.UserId == preSelectedUserId.Value)">
+                                    @user.FirstName @user.LastName (@user.Position)
+                                </option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Job Location <span class="text-danger">*</span></label>
+                        <select name="LocationId" class="form-select" required>
+                            <option value="">-- Select Location --</option>
+                            @foreach (var loc in locations.Where(l => l.IsActive).OrderBy(l => l.Name))
+                            {
+                                <option value="@loc.LocationId" selected="@(preSelectedLocationId.HasValue && loc.LocationId == preSelectedLocationId.Value)">
+                                    @loc.Name - @loc.Address
+                                </option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Clock In Time</label>
+                        <input type="datetime-local" name="ClockInTime" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-ddTHH:mm")" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Clock Out Time</label>
+                        <input type="datetime-local" name="ClockOutTime" class="form-control" />
+                    </div>
+
+                    @if (preSelectedClockRecordId.HasValue)
+                    {
+                        <input type="hidden" name="ClockRecordId" value="@preSelectedClockRecordId" />
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Checklist Card -->
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-check2-square me-2"></i>Service Checklist</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6 col-lg-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="PoolVacuumed" id="PoolVacuumed">
+                            <label class="form-check-label" for="PoolVacuumed">Pool Vacuumed</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="PoolBrushed" id="PoolBrushed">
+                            <label class="form-check-label" for="PoolBrushed">Pool Brushed</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="SkimmerBasketsEmptied" id="SkimmerBasketsEmptied">
+                            <label class="form-check-label" for="SkimmerBasketsEmptied">Skimmer Baskets Emptied</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="PumpBasketsEmptied" id="PumpBasketsEmptied">
+                            <label class="form-check-label" for="PumpBasketsEmptied">Pump Baskets Emptied</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="FilterCleaned" id="FilterCleaned">
+                            <label class="form-check-label" for="FilterCleaned">Filter Cleaned</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="ChemicalsAdded" id="ChemicalsAdded">
+                            <label class="form-check-label" for="ChemicalsAdded">Chemicals Added</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="PoolDeckCleaned" id="PoolDeckCleaned">
+                            <label class="form-check-label" for="PoolDeckCleaned">Pool Deck Cleaned</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="EquipmentChecked" id="EquipmentChecked">
+                            <label class="form-check-label" for="EquipmentChecked">Equipment Checked</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="GateLocksChecked" id="GateLocksChecked">
+                            <label class="form-check-label" for="GateLocksChecked">Gate Locks Checked</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="SafetyEquipmentInspected" id="SafetyEquipmentInspected">
+                            <label class="form-check-label" for="SafetyEquipmentInspected">Safety Equipment Inspected</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="WaterLevelChecked" id="WaterLevelChecked">
+                            <label class="form-check-label" for="WaterLevelChecked">Water Level Checked</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="DebrisRemoved" id="DebrisRemoved">
+                            <label class="form-check-label" for="DebrisRemoved">Debris Removed</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="TilesInspected" id="TilesInspected">
+                            <label class="form-check-label" for="TilesInspected">Tiles Inspected</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="DrainCoversChecked" id="DrainCoversChecked">
+                            <label class="form-check-label" for="DrainCoversChecked">Drain Covers Checked</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="LightsChecked" id="LightsChecked">
+                            <label class="form-check-label" for="LightsChecked">Lights Checked</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="SignageChecked" id="SignageChecked">
+                            <label class="form-check-label" for="SignageChecked">Signage Checked</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="FurnitureArranged" id="FurnitureArranged">
+                            <label class="form-check-label" for="FurnitureArranged">Furniture Arranged</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="RestroomsCleaned" id="RestroomsCleaned">
+                            <label class="form-check-label" for="RestroomsCleaned">Restrooms Cleaned</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="PoolGateLocked" id="PoolGateLocked">
+                            <label class="form-check-label" for="PoolGateLocked"><strong>Pool Gate Locked</strong></label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chemical Readings Card -->
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-droplet me-2"></i>Chemical Readings</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 mb-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Pool Type</label>
+                        <select name="chemicalReadings[0].PoolType" class="form-select">
+                            <option value="Main pool">Main pool</option>
+                            <option value="Wading Pool">Wading Pool</option>
+                            <option value="Spa">Spa</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Chlorine/Bromine (ppm)</label>
+                        <input type="number" step="0.01" name="chemicalReadings[0].ChlorineBromine" class="form-control" placeholder="0.00" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">pH Level</label>
+                        <input type="number" step="0.1" name="chemicalReadings[0].pH" class="form-control" placeholder="7.0" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Calcium Hardness (ppm)</label>
+                        <input type="number" step="1" name="chemicalReadings[0].CalciumHardness" class="form-control" placeholder="200" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Total Alkalinity (ppm)</label>
+                        <input type="number" step="1" name="chemicalReadings[0].TotalAlkalinity" class="form-control" placeholder="80" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Cyanuric Acid (ppm)</label>
+                        <input type="number" step="1" name="chemicalReadings[0].CyanuricAcid" class="form-control" placeholder="30" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Salt (ppm)</label>
+                        <input type="number" step="100" name="chemicalReadings[0].Salt" class="form-control" placeholder="3000" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Temperature (°F)</label>
+                        <input type="number" step="0.1" name="chemicalReadings[0].Temperature" class="form-control" placeholder="78.0" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Additional Information Card -->
+        <div class="card mb-4">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="bi bi-clipboard me-2"></i>Additional Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label">Supplies Needed</label>
+                        <textarea name="SuppliesNeeded" class="form-control" rows="2" placeholder="List any supplies that need to be ordered..."></textarea>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Notes</label>
+                        <textarea name="Notes" class="form-control" rows="3" placeholder="Additional notes or observations..."></textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Report Sent To</label>
+                        <select name="ReportSentTo" class="form-select">
+                            <option value="">-- Select Recipient --</option>
+                            <option value="Me">Me</option>
+                            <option value="Manager">Manager</option>
+                            <option value="Customer">Customer</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2">
+            <a href="@Url.Action("Index")" class="btn btn-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-save me-2"></i>Submit Report
+            </button>
+        </div>
+    </form>
+</div>

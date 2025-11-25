@@ -1,0 +1,306 @@
+@using SummerSplashWeb.Models
+@{
+    ViewData["Title"] = "Time Clock";
+    var users = ViewBag.Users as List<User> ?? new List<User>();
+    var activeShifts = ViewBag.ActiveShifts as List<ClockRecord> ?? new List<ClockRecord>();
+    var todaysRecords = ViewBag.TodaysRecords as List<ClockRecord> ?? new List<ClockRecord>();
+}
+
+<div class="content-area">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="bi bi-clock-history me-2"></i>Time Clock</h2>
+            <p class="text-muted mb-0">Employee time tracking and attendance</p>
+        </div>
+        <div>
+            <span class="badge bg-success me-2" style="font-size: 1rem;">
+                <i class="bi bi-people-fill me-1"></i>@activeShifts.Count Active Now
+            </span>
+            <span class="text-muted">@DateTime.Now.ToString("dddd, MMM d, yyyy h:mm tt")</span>
+        </div>
+    </div>
+
+    <!-- Alerts -->
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle me-2"></i>@TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i>@TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Active Shifts -->
+    @if (activeShifts.Any())
+    {
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-person-check-fill me-2"></i>Currently Clocked In (@activeShifts.Count)</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    @foreach (var shift in activeShifts)
+                    {
+                        var user = users.FirstOrDefault(u => u.UserId == shift.UserId);
+                        var duration = DateTime.Now - shift.ClockInTime;
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <div class="card border-success">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <div>
+                                            <h6 class="mb-1">
+                                                <i class="bi bi-person-circle me-1"></i>@shift.UserName
+                                            </h6>
+                                            <small class="text-muted">@(user?.Position ?? "Employee")</small>
+                                        </div>
+                                        <span class="badge bg-success">Active</span>
+                                    </div>
+                                    <div class="mt-2">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <small class="text-muted">Location:</small>
+                                            <small>@shift.LocationName</small>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <small class="text-muted">Clock In:</small>
+                                            <small>@shift.ClockInTime.ToString("h:mm tt")</small>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <small class="text-muted">Duration:</small>
+                                            <strong>@duration.ToString(@"hh\:mm")</strong>
+                                        </div>
+                                    </div>
+                                    <form asp-action="ClockOut" method="post" class="d-inline w-100">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="recordId" value="@shift.RecordId" />
+                                        <button type="submit" class="btn btn-danger w-100">
+                                            <i class="bi bi-clock me-1"></i>Clock Out
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Employee List for Clock In -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="bi bi-people me-2"></i>Employees</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                @foreach (var user in users.Where(u => u.IsActive).OrderBy(u => u.FirstName))
+                {
+                    var isClockedIn = activeShifts.Any(s => s.UserId == user.UserId);
+                    var activeShift = activeShifts.FirstOrDefault(s => s.UserId == user.UserId);
+                    var todayRecords = todaysRecords.Where(r => r.UserId == user.UserId).ToList();
+                    var todayHours = todayRecords.Where(r => r.TotalHours.HasValue).Sum(r => r.TotalHours.Value);
+                    var lastClockOut = todayRecords.Where(r => r.ClockOutTime.HasValue).OrderByDescending(r => r.ClockOutTime).FirstOrDefault();
+
+                    <div class="col-md-6 col-lg-4 col-xl-3 mb-3">
+                        <div class="card h-100 @(isClockedIn ? "border-success border-2" : "")">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <h6 class="mb-1">@user.FirstName @user.LastName</h6>
+                                        <small class="text-muted">@user.Position</small>
+                                    </div>
+                                    @if (isClockedIn)
+                                    {
+                                        <span class="badge bg-success">Clocked In</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Not Clocked In</span>
+                                    }
+                                </div>
+
+                                @if (isClockedIn && activeShift != null)
+                                {
+                                    <div class="border-start border-success border-3 ps-2 mb-2">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <small class="text-muted">Clock In:</small>
+                                            <strong class="text-success">@activeShift.ClockInTime.ToString("h:mm tt")</strong>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <small class="text-muted">Location:</small>
+                                            <small><i class="bi bi-geo-alt"></i> @activeShift.LocationName</small>
+                                        </div>
+                                        <div class="d-flex justify-content-between">
+                                            <small class="text-muted">Duration:</small>
+                                            <strong>@((DateTime.Now - activeShift.ClockInTime).ToString(@"h\:mm"))</strong>
+                                        </div>
+                                    </div>
+                                }
+                                else if (lastClockOut != null)
+                                {
+                                    <div class="border-start border-secondary border-2 ps-2 mb-2">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <small class="text-muted">Last Out:</small>
+                                            <small>@lastClockOut.ClockOutTime.Value.ToString("h:mm tt")</small>
+                                        </div>
+                                        <div class="d-flex justify-content-between">
+                                            <small class="text-muted">Location:</small>
+                                            <small><i class="bi bi-geo-alt"></i> @lastClockOut.LocationName</small>
+                                        </div>
+                                    </div>
+                                }
+
+                                <div class="mb-2 text-center">
+                                    <small class="text-muted">Today's Hours: </small>
+                                    <span class="badge bg-info">@todayHours.ToString("F1")h</span>
+                                </div>
+
+                                <div class="d-grid gap-2">
+                                    @if (!isClockedIn)
+                                    {
+                                        <button type="button" class="btn btn-success btn-sm"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#clockInModal@(user.UserId)">
+                                            <i class="bi bi-clock me-1"></i>Clock In
+                                        </button>
+                                    }
+                                    <a href="@Url.Action("EmployeeClockHistory", new { userId = user.UserId })"
+                                       class="btn btn-outline-primary btn-sm">
+                                        <i class="bi bi-calendar-event me-1"></i>View History
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Clock In Modal -->
+                        <div class="modal fade" id="clockInModal@(user.UserId)" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Clock In - @user.FirstName @user.LastName</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <form asp-action="ClockIn" method="post">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="userId" value="@user.UserId" />
+                                        <div class="modal-body">
+                                            <div class="mb-3">
+                                                <label class="form-label">Select Location <span class="text-danger">*</span></label>
+                                                <select name="locationId" class="form-select" required>
+                                                    <option value="">-- Choose Location --</option>
+                                                    @{
+                                                        var locations = ViewBag.Locations as List<JobLocation> ?? new List<JobLocation>();
+                                                        if (!locations.Any())
+                                                        {
+                                                            // Fallback if locations not loaded
+                                                            <option value="1">Default Location</option>
+                                                        }
+                                                        else
+                                                        {
+                                                            foreach (var loc in locations.Where(l => l.IsActive).OrderBy(l => l.Name))
+                                                            {
+                                                                <option value="@loc.LocationId">@loc.Name</option>
+                                                            }
+                                                        }
+                                                    }
+                                                </select>
+                                            </div>
+                                            <div class="alert alert-info">
+                                                <i class="bi bi-info-circle me-2"></i>
+                                                <strong>Clock In Time:</strong> @DateTime.Now.ToString("h:mm tt")
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <button type="submit" class="btn btn-success">
+                                                <i class="bi bi-clock me-1"></i>Clock In
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Today's Summary -->
+    <div class="card">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="bi bi-calendar-day me-2"></i>Today's Activity</h5>
+        </div>
+        <div class="card-body">
+            @if (todaysRecords.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Location</th>
+                                <th>Clock In</th>
+                                <th>Clock Out</th>
+                                <th>Hours</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var record in todaysRecords.OrderByDescending(r => r.ClockInTime))
+                            {
+                                <tr>
+                                    <td>@record.UserName</td>
+                                    <td>@record.LocationName</td>
+                                    <td>@record.ClockInTime.ToString("h:mm tt")</td>
+                                    <td>@(record.ClockOutTime?.ToString("h:mm tt") ?? "-")</td>
+                                    <td>
+                                        @if (record.TotalHours.HasValue)
+                                        {
+                                            <span class="badge bg-secondary">@record.TotalHours.Value.ToString("F1")h</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (record.ClockOutTime.HasValue)
+                                        {
+                                            <span class="badge bg-secondary">Completed</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success">Active</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-4">
+                    <i class="bi bi-clock-history" style="font-size: 3rem; color: #ccc;"></i>
+                    <p class="text-muted mt-3">No activity recorded today</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<script>
+    // Auto-refresh active shifts every 30 seconds
+    setInterval(function() {
+        location.reload();
+    }, 30000);
+</script>

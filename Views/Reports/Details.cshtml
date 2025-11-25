@@ -1,0 +1,237 @@
+@model SummerSplashWeb.Models.ServiceTechReport
+@{
+    ViewData["Title"] = "Report Details";
+    var chemicalReadings = ViewBag.ChemicalReadings as List<SummerSplashWeb.Models.ChemicalReading> ?? new List<SummerSplashWeb.Models.ChemicalReading>();
+}
+
+<div class="mb-3">
+    <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-2"></i>Back to Reports
+    </a>
+</div>
+
+<div class="row g-4">
+    <!-- Report Header Card -->
+    <div class="col-12">
+        <div class="card" style="border: none; border-radius: 15px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);">
+            <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 15px 15px 0 0;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-file-earmark-text me-2"></i>Service Report #@Model.ReportId
+                    </h5>
+                    <span class="badge bg-light text-dark" style="font-size: 14px;">
+                        @Model.ServiceDate.ToString("MMMM dd, yyyy")
+                    </span>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <small class="text-muted d-block mb-1">
+                            <i class="bi bi-person me-2"></i>Technician
+                        </small>
+                        <div style="font-weight: 600; color: #344767; font-size: 16px;">
+                            @Model.TechName
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <small class="text-muted d-block mb-1">
+                            <i class="bi bi-geo-alt me-2"></i>Location
+                        </small>
+                        <div style="font-weight: 600; color: #344767; font-size: 16px;">
+                            @Model.LocationName
+                        </div>
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <small class="text-muted d-block mb-1">
+                            <i class="bi bi-clock me-2"></i>Service Time
+                        </small>
+                        <div style="font-weight: 600; color: #344767;">
+                            @Model.ServiceTime.ToString("h:mm tt")
+                        </div>
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <small class="text-muted d-block mb-1">
+                            <i class="bi bi-tag me-2"></i>Service Type
+                        </small>
+                        <div>
+                            @if (Model.ServiceType == "Routine")
+                            {
+                                <span class="badge bg-primary">
+                                    <i class="bi bi-arrow-repeat me-1"></i>Routine
+                                </span>
+                            }
+                            else if (Model.ServiceType == "Emergency")
+                            {
+                                <span class="badge bg-danger">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>Emergency
+                                </span>
+                            }
+                            else if (Model.ServiceType == "Maintenance")
+                            {
+                                <span class="badge bg-warning">
+                                    <i class="bi bi-wrench me-1"></i>Maintenance
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">@Model.ServiceType</span>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <small class="text-muted d-block mb-1">
+                            <i class="bi bi-check-circle me-2"></i>Status
+                        </small>
+                        <div>
+                            <span class="badge bg-success">
+                                <i class="bi bi-check-circle me-1"></i>Completed
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chemical Readings -->
+    @if (chemicalReadings.Any())
+    {
+        <div class="col-lg-6">
+            <div class="card h-100" style="border: none; border-radius: 15px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);">
+                <div class="card-header" style="background: #f8f9fa; border-bottom: 2px solid #e9ecef; border-radius: 15px 15px 0 0;">
+                    <h6 class="mb-0" style="color: #344767; font-weight: 700;">
+                        <i class="bi bi-droplet me-2"></i>Chemical Readings
+                    </h6>
+                </div>
+                <div class="card-body p-4">
+                    @foreach (var reading in chemicalReadings)
+                    {
+                        <div class="mb-3 pb-3 border-bottom">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <small class="text-muted">@reading.ReadingTime.ToString("h:mm tt")</small>
+                                </div>
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <small class="text-muted d-block">pH Level</small>
+                                    <strong style="color: #344767;">@reading.PHLevel</strong>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted d-block">Chlorine</small>
+                                    <strong style="color: #344767;">@reading.ChlorineLevel ppm</strong>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted d-block">Alkalinity</small>
+                                    <strong style="color: #344767;">@reading.Alkalinity ppm</strong>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted d-block">Temperature</small>
+                                    <strong style="color: #344767;">@reading.Temperature°F</strong>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Service Details -->
+    <div class="col-lg-@(chemicalReadings.Any() ? "6" : "12")">
+        <div class="card h-100" style="border: none; border-radius: 15px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);">
+            <div class="card-header" style="background: #f8f9fa; border-bottom: 2px solid #e9ecef; border-radius: 15px 15px 0 0;">
+                <h6 class="mb-0" style="color: #344767; font-weight: 700;">
+                    <i class="bi bi-clipboard-check me-2"></i>Service Details
+                </h6>
+            </div>
+            <div class="card-body p-4">
+                @if (!string.IsNullOrEmpty(Model.WorkPerformed))
+                {
+                    <div class="mb-4">
+                        <h6 style="color: #344767; font-weight: 600;">Work Performed</h6>
+                        <p style="color: #7b809a; line-height: 1.6;">
+                            @Model.WorkPerformed
+                        </p>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(Model.ChemicalsAddedNotes))
+                {
+                    <div class="mb-4">
+                        <h6 style="color: #344767; font-weight: 600;">Chemicals Added</h6>
+                        <p style="color: #7b809a; line-height: 1.6;">
+                            @Model.ChemicalsAddedNotes
+                        </p>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(Model.IssuesFound))
+                {
+                    <div class="mb-4">
+                        <h6 style="color: #344767; font-weight: 600;">Issues Found</h6>
+                        <div class="alert alert-warning" style="border-radius: 10px;">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            @Model.IssuesFound
+                        </div>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(Model.Recommendations))
+                {
+                    <div class="mb-4">
+                        <h6 style="color: #344767; font-weight: 600;">Recommendations</h6>
+                        <div class="alert alert-info" style="border-radius: 10px;">
+                            <i class="bi bi-lightbulb me-2"></i>
+                            @Model.Recommendations
+                        </div>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(Model.Notes))
+                {
+                    <div>
+                        <h6 style="color: #344767; font-weight: 600;">Additional Notes</h6>
+                        <p style="color: #7b809a; line-height: 1.6;">
+                            @Model.Notes
+                        </p>
+                    </div>
+                }
+
+                @if (string.IsNullOrEmpty(Model.WorkPerformed) && string.IsNullOrEmpty(Model.ChemicalsAddedNotes) &&
+                     string.IsNullOrEmpty(Model.IssuesFound) && string.IsNullOrEmpty(Model.Recommendations) &&
+                     string.IsNullOrEmpty(Model.Notes))
+                {
+                    <div class="text-center py-4">
+                        <i class="bi bi-file-text" style="font-size: 48px; opacity: 0.3; color: #7b809a;"></i>
+                        <p class="mt-3 mb-0 text-muted">No additional details recorded</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .btn-outline-secondary {
+        border: 2px solid #6c757d;
+        border-radius: 10px;
+        padding: 10px 20px;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+
+    .btn-outline-secondary:hover {
+        transform: translateY(-2px);
+    }
+
+    h6 {
+        font-weight: 700;
+        color: #344767;
+    }
+</style>

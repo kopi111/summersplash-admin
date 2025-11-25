@@ -1,0 +1,144 @@
+@model List<SummerSplashWeb.Models.JobLocation>
+@{
+    ViewData["Title"] = "Job Locations";
+}
+
+<div class="content-area">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="bi bi-geo-alt me-2"></i>Job Locations</h2>
+            <p class="text-muted mb-0">Manage pool service locations</p>
+        </div>
+        <a href="@Url.Action("Create")" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-2"></i>Add New Location
+        </a>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle me-2"></i>@TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i>@TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="card">
+        <div class="card-body">
+            @if (Model == null || !Model.Any())
+            {
+                <div class="text-center py-5">
+                    <i class="bi bi-geo-alt" style="font-size: 4rem; color: #ccc;"></i>
+                    <h4 class="mt-3">No Locations Found</h4>
+                    <p class="text-muted">Get started by adding your first job location.</p>
+                    <a href="@Url.Action("Create")" class="btn btn-primary mt-3">
+                        <i class="bi bi-plus-lg me-2"></i>Add Location
+                    </a>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Address</th>
+                                <th>City</th>
+                                <th>Type</th>
+                                <th>Geofence</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var location in Model)
+                            {
+                                <tr>
+                                    <td>
+                                        <strong>@location.Name</strong>
+                                    </td>
+                                    <td>@location.Address</td>
+                                    <td>@location.City, @location.State @location.ZipCode</td>
+                                    <td>
+                                        <span class="badge bg-info">@(location.PoolType ?? "N/A")</span>
+                                    </td>
+                                    <td>
+                                        @if (location.Latitude.HasValue && location.Longitude.HasValue)
+                                        {
+                                            <span class="badge bg-success" title="Lat: @location.Latitude?.ToString("F4"), Lng: @location.Longitude?.ToString("F4")">
+                                                <i class="bi bi-geo-alt-fill me-1"></i>@(location.GeofenceRadius)m
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="bi bi-exclamation-triangle me-1"></i>Not Set
+                                            </span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (location.IsActive)
+                                        {
+                                            <span class="badge bg-success">Active</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Inactive</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="@Url.Action("Details", new { id = location.LocationId })"
+                                               class="btn btn-sm btn-outline-primary" title="View Details">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <a href="@Url.Action("Edit", new { id = location.LocationId })"
+                                               class="btn btn-sm btn-outline-warning" title="Edit">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#deleteModal-@location.LocationId" title="Delete">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+
+                                        <!-- Delete Modal -->
+                                        <div class="modal fade" id="deleteModal-@location.LocationId" tabindex="-1">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title">Confirm Delete</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        Are you sure you want to delete <strong>@location.Name</strong>?
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                        <form method="post" asp-action="Delete" asp-route-id="@location.LocationId" style="display: inline;">
+                                                            @Html.AntiForgeryToken()
+                                                            <button type="submit" class="btn btn-danger">Delete</button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>

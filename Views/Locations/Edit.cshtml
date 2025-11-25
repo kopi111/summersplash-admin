@@ -1,0 +1,277 @@
+@model SummerSplashWeb.Models.JobLocation
+@{
+    ViewData["Title"] = "Edit Location";
+}
+
+<div class="content-area">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="bi bi-geo-alt-fill me-2"></i>Edit Location</h2>
+            <p class="text-muted mb-0">Update location details and coordinates</p>
+        </div>
+        <div>
+            <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to Locations
+            </a>
+        </div>
+    </div>
+
+    <form asp-action="Edit" method="post" id="locationForm">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="LocationId" />
+        <input type="hidden" asp-for="CreatedAt" />
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+        <div class="row">
+            <!-- Left Column - Form Fields -->
+            <div class="col-lg-5">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <i class="bi bi-building me-2"></i>Location Details
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label asp-for="Name" class="form-label">
+                                    <i class="bi bi-tag me-1"></i>Location Name <span class="text-danger">*</span>
+                                </label>
+                                <input asp-for="Name" class="form-control" placeholder="e.g., Sunset Community Pool" required />
+                                <span asp-validation-for="Name" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-12">
+                                <label asp-for="Address" class="form-label">
+                                    <i class="bi bi-signpost me-1"></i>Address <span class="text-danger">*</span>
+                                </label>
+                                <input asp-for="Address" class="form-control" id="addressInput" placeholder="Enter address" required />
+                                <span asp-validation-for="Address" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header bg-info text-white">
+                        <i class="bi bi-person me-2"></i>Contact Information
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label asp-for="ContactName" class="form-label">Contact Person</label>
+                                <input asp-for="ContactName" class="form-control" placeholder="e.g., John Smith" />
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="ContactPhone" class="form-label">Phone</label>
+                                <input asp-for="ContactPhone" class="form-control" placeholder="e.g., 555-123-4567" />
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="ContactEmail" class="form-label">Email</label>
+                                <input asp-for="ContactEmail" type="email" class="form-control" placeholder="e.g., contact@email.com" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header bg-success text-white">
+                        <i class="bi bi-crosshair me-2"></i>Map Coordinates
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            Click on the map or search an address to update coordinates.
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label asp-for="Latitude" class="form-label">
+                                    <i class="bi bi-geo me-1"></i>Latitude
+                                </label>
+                                <input asp-for="Latitude" class="form-control" id="latitudeInput" readonly placeholder="Click map or search address" />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="Longitude" class="form-label">
+                                    <i class="bi bi-geo me-1"></i>Longitude
+                                </label>
+                                <input asp-for="Longitude" class="form-control" id="longitudeInput" readonly placeholder="Click map or search address" />
+                            </div>
+
+                            <div class="col-12">
+                                <button type="button" class="btn btn-outline-primary w-100" onclick="searchAddress()">
+                                    <i class="bi bi-search me-2"></i>Search Address on Map
+                                </button>
+                            </div>
+
+                            <div class="col-12">
+                                <div class="form-check form-switch">
+                                    <input asp-for="IsActive" class="form-check-input" type="checkbox" id="isActiveSwitch" />
+                                    <label class="form-check-label" for="isActiveSwitch">
+                                        <i class="bi bi-check-circle me-1"></i>Location is Active
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column - Map -->
+            <div class="col-lg-7">
+                <div class="card sticky-top" style="top: 20px;">
+                    <div class="card-header bg-dark text-white">
+                        <i class="bi bi-map me-2"></i>Location on Map
+                        <span class="badge bg-warning text-dark float-end">Click to update location</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="map" style="height: 500px; width: 100%;"></div>
+                    </div>
+                    <div class="card-footer">
+                        <small class="text-muted">
+                            <i class="bi bi-hand-index me-1"></i>Click on the map to update the location
+                        </small>
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex justify-content-between">
+                    <a href="@Url.Action("Index")" class="btn btn-secondary btn-lg">
+                        <i class="bi bi-x-circle me-1"></i>Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                        <i class="bi bi-check-circle me-1"></i>Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <!-- Leaflet CSS and JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        let map;
+        let marker;
+
+        const existingLat = @(Model.Latitude.HasValue ? Model.Latitude.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) : "null");
+        const existingLng = @(Model.Longitude.HasValue ? Model.Longitude.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) : "null");
+
+        const defaultLat = 39.8283;
+        const defaultLng = -98.5795;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initMap();
+        });
+
+        function initMap() {
+            var usBounds = L.latLngBounds(
+                L.latLng(24.396308, -125.000000),
+                L.latLng(49.384358, -66.934570)
+            );
+
+            const initialLat = existingLat || defaultLat;
+            const initialLng = existingLng || defaultLng;
+            const initialZoom = existingLat ? 17 : 5;
+
+            map = L.map('map', {
+                maxBounds: usBounds,
+                maxBoundsViscosity: 1.0,
+                minZoom: 4,
+                maxZoom: 18
+            }).setView([initialLat, initialLng], initialZoom);
+
+            if (!existingLat) {
+                map.fitBounds(usBounds);
+            }
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap',
+                bounds: usBounds
+            }).addTo(map);
+
+            map.on('click', function(e) {
+                setLocation(e.latlng.lat, e.latlng.lng);
+            });
+
+            if (existingLat && existingLng) {
+                setLocation(existingLat, existingLng);
+            }
+        }
+
+        function setLocation(lat, lng) {
+            document.getElementById('latitudeInput').value = lat.toFixed(6);
+            document.getElementById('longitudeInput').value = lng.toFixed(6);
+
+            if (marker) {
+                map.removeLayer(marker);
+            }
+
+            marker = L.marker([lat, lng], {
+                draggable: true
+            }).addTo(map);
+
+            marker.on('dragend', function(e) {
+                const pos = e.target.getLatLng();
+                setLocation(pos.lat, pos.lng);
+            });
+
+            marker.bindPopup('<b>@Html.Raw(Model.Name?.Replace("'", "\\'"))</b><br>Lat: ' + lat.toFixed(6) + '<br>Lng: ' + lng.toFixed(6)).openPopup();
+        }
+
+        function searchAddress() {
+            const address = document.getElementById('addressInput').value;
+
+            if (!address.trim()) {
+                alert('Please enter an address to search.');
+                return;
+            }
+
+            const url = 'https://nominatim.openstreetmap.org/search?format=json&countrycodes=us&q=' + encodeURIComponent(address);
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.length > 0) {
+                        const result = data[0];
+                        const lat = parseFloat(result.lat);
+                        const lng = parseFloat(result.lon);
+                        setLocation(lat, lng);
+                        map.setView([lat, lng], 17);
+                    } else {
+                        alert('Address not found. Please try a different address or click directly on the map.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Geocoding error:', error);
+                    alert('Error searching for address. Please try again or click directly on the map.');
+                });
+        }
+
+        document.getElementById('locationForm').addEventListener('submit', function(e) {
+            const lat = document.getElementById('latitudeInput').value;
+            const lng = document.getElementById('longitudeInput').value;
+
+            if (!lat || !lng) {
+                e.preventDefault();
+                alert('Please select a location on the map or search for an address to set the coordinates.');
+                return false;
+            }
+        });
+    </script>
+
+    <style>
+        .leaflet-container {
+            font-family: inherit;
+        }
+        #map {
+            border-radius: 0;
+        }
+        .sticky-top {
+            z-index: 1000;
+        }
+    </style>
+}
