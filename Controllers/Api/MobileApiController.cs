@@ -87,6 +87,117 @@ namespace SummerSplashWeb.Controllers.Api
         }
 
         /// <summary>
+        /// Dev endpoint to approve user (REMOVE IN PRODUCTION)
+        /// </summary>
+        [HttpPost("dev-approve/{email}")]
+        public async Task<IActionResult> DevApproveUser(string email)
+        {
+            try
+            {
+                using var connection = _databaseService.CreateConnection();
+                var sql = "UPDATE Users SET IsApproved = 1, IsActive = 1 WHERE Email = @Email";
+                var rows = await connection.ExecuteAsync(sql, new { Email = email });
+                return Ok(new { success = true, message = $"Approved {rows} user(s)" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Dev endpoint to create user directly (REMOVE IN PRODUCTION)
+        /// </summary>
+        [HttpPost("dev-create-user")]
+        public async Task<IActionResult> DevCreateUser([FromBody] DevUserRequest request)
+        {
+            try
+            {
+                using var connection = _databaseService.CreateConnection();
+
+                // Check if user already exists
+                var existingUser = await connection.QueryFirstOrDefaultAsync<int?>(
+                    "SELECT UserId FROM Users WHERE Email = @Email",
+                    new { request.Email });
+
+                if (existingUser.HasValue)
+                {
+                    return Ok(new { success = true, userId = existingUser.Value, message = "User already exists" });
+                }
+
+                // Insert with specific UserId if provided
+                string sql;
+                if (request.UserId.HasValue)
+                {
+                    sql = @"SET IDENTITY_INSERT Users ON;
+                            INSERT INTO Users (UserId, Email, FirstName, LastName, PasswordHash, PasswordSalt, Position, IsApproved, IsActive, EmailVerified, CreatedAt)
+                            VALUES (@UserId, @Email, @FirstName, @LastName, @PasswordHash, @PasswordSalt, @Position, 1, 1, 1, GETDATE());
+                            SET IDENTITY_INSERT Users OFF;
+                            SELECT @UserId";
+                }
+                else
+                {
+                    sql = @"INSERT INTO Users (Email, FirstName, LastName, PasswordHash, PasswordSalt, Position, IsApproved, IsActive, EmailVerified, CreatedAt)
+                            VALUES (@Email, @FirstName, @LastName, @PasswordHash, @PasswordSalt, @Position, 1, 1, 1, GETDATE());
+                            SELECT CAST(SCOPE_IDENTITY() AS INT)";
+                }
+
+                var userId = await connection.ExecuteScalarAsync<int>(sql, new {
+                    request.UserId,
+                    request.Email,
+                    FirstName = request.FirstName ?? "Test",
+                    LastName = request.LastName ?? "User",
+                    PasswordHash = "$2a$11$XZqJ5RMmEq3aBKw7YqYiN.demopasswordhash",
+                    PasswordSalt = "$2a$11$XZqJ5RMmEq3aBKw7YqYiN.",
+                    Position = request.Position ?? "Lifeguard"
+                });
+
+                return Ok(new { success = true, userId, message = "User created" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
+        public class DevUserRequest
+        {
+            public int? UserId { get; set; }
+            public string Email { get; set; } = "";
+            public string? FirstName { get; set; }
+            public string? LastName { get; set; }
+            public string? Position { get; set; }
+        }
+
+        /// <summary>
+        /// Dev endpoint to create schedule for testing (REMOVE IN PRODUCTION)
+        /// </summary>
+        [HttpPost("dev-create-schedule")]
+        public async Task<IActionResult> DevCreateSchedule([FromBody] DevScheduleRequest request)
+        {
+            try
+            {
+                using var connection = _databaseService.CreateConnection();
+                var sql = @"INSERT INTO Schedules (UserId, LocationId, ScheduledDate, StartTime, EndTime, Notes, CreatedAt)
+                            VALUES (@UserId, @LocationId, @ScheduledDate, @StartTime, @EndTime, @Notes, GETDATE())";
+
+                var rows = await connection.ExecuteAsync(sql, new {
+                    request.UserId,
+                    request.LocationId,
+                    ScheduledDate = request.ScheduleDate ?? DateTime.Today,
+                    StartTime = request.StartTime ?? "09:00",
+                    EndTime = request.EndTime ?? "17:00",
+                    Notes = request.Notes ?? "Test schedule"
+                });
+                return Ok(new { success = true, message = $"Created {rows} schedule(s)" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
+        /// <summary>
         /// Login with email and password
         /// </summary>
         /// <param name="request">Login credentials</param>
@@ -1107,6 +1218,72 @@ namespace SummerSplashWeb.Controllers.Api
         }
 
         /// <summary>
+        /// Find nearby locations based on GPS coordinates
+        /// </summary>
+        /// <param name="latitude">User's latitude</param>
+        /// <param name="longitude">User's longitude</param>
+        /// <param name="maxDistance">Maximum distance in meters (default 500)</param>
+        /// <returns>List of nearby locations with distance</returns>
+        [HttpGet("locations/nearby")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> GetNearbyLocations(
+            [FromQuery] double latitude,
+            [FromQuery] double longitude,
+            [FromQuery] double maxDistance = 500)
+        {
+            try
+            {
+                var allLocations = await _locationService.GetAllLocationsAsync();
+                var nearbyLocations = new List<object>();
+
+                foreach (var loc in allLocations.Where(l => l.IsActive && l.Latitude.HasValue && l.Longitude.HasValue))
+                {
+                    var distance = CalculateDistance(latitude, longitude, loc.Latitude!.Value, loc.Longitude!.Value);
+                    if (distance <= maxDistance)
+                    {
+                        nearbyLocations.Add(new
+                        {
+                            locationId = loc.LocationId,
+                            name = loc.Name,
+                            address = loc.Address,
+                            latitude = loc.Latitude,
+                            longitude = loc.Longitude,
+                            geofenceRadius = loc.GeofenceRadius,
+                            isActive = loc.IsActive,
+                            distanceMeters = Math.Round(distance, 2)
+                        });
+                    }
+                }
+
+                return Ok(new
+                {
+                    success = true,
+                    locations = nearbyLocations.OrderBy(l => ((dynamic)l).distanceMeters).ToList()
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get nearby locations");
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
+        private double CalculateDistance(double lat1, double lon1, double lat2, double lon2)
+        {
+            const double R = 6371000; // Earth's radius in meters
+            var dLat = ToRad(lat2 - lat1);
+            var dLon = ToRad(lon2 - lon1);
+            var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+                    Math.Cos(ToRad(lat1)) * Math.Cos(ToRad(lat2)) *
+                    Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+            var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+            return R * c;
+        }
+
+        private double ToRad(double deg) => deg * Math.PI / 180;
+
+        /// <summary>
         /// Get location details by ID
         /// </summary>
         /// <param name="locationId">Location ID</param>
@@ -1376,6 +1553,16 @@ namespace SummerSplashWeb.Controllers.Api
     public class ClockOutRequest
     {
         public int UserId { get; set; }
+    }
+
+    public class DevScheduleRequest
+    {
+        public int UserId { get; set; }
+        public int LocationId { get; set; }
+        public DateTime? ScheduleDate { get; set; }
+        public string? StartTime { get; set; }
+        public string? EndTime { get; set; }
+        public string? Notes { get; set; }
     }
 
     #endregion
