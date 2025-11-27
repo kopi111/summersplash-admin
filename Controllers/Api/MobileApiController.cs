@@ -954,6 +954,43 @@ namespace SummerSplashWeb.Controllers.Api
         {
             try
             {
+                using var connection = _databaseService.CreateConnection();
+
+                // Check if user already has an active clock-in (not clocked out)
+                var activeRecord = await connection.QueryFirstOrDefaultAsync<ClockRecord>(
+                    "SELECT * FROM ClockRecords WHERE UserId = @UserId AND ClockOutTime IS NULL",
+                    new { UserId = request.UserId }
+                );
+
+                if (activeRecord != null)
+                {
+                    return BadRequest(new { success = false, message = "You are already clocked in. Please clock out first." });
+                }
+
+                // Check if user already clocked out today (completed a shift today)
+                var todayStart = DateTime.Today;
+                var todayEnd = DateTime.Today.AddDays(1);
+                var completedTodayRecord = await connection.QueryFirstOrDefaultAsync<ClockRecord>(
+                    @"SELECT * FROM ClockRecords
+                      WHERE UserId = @UserId
+                        AND ClockOutTime IS NOT NULL
+                        AND ClockInTime >= @TodayStart
+                        AND ClockInTime < @TodayEnd",
+                    new { UserId = request.UserId, TodayStart = todayStart, TodayEnd = todayEnd }
+                );
+
+                if (completedTodayRecord != null && !request.ForceOverride)
+                {
+                    return Ok(new
+                    {
+                        success = false,
+                        requiresConfirmation = true,
+                        message = "You have already clocked out today. Do you want to start a new shift?",
+                        previousClockIn = completedTodayRecord.ClockInTime,
+                        previousClockOut = completedTodayRecord.ClockOutTime
+                    });
+                }
+
                 var clockRecord = new ClockRecord
                 {
                     UserId = request.UserId,
@@ -1548,6 +1585,7 @@ namespace SummerSplashWeb.Controllers.Api
         public int UserId { get; set; }
         public int LocationId { get; set; }
         public string? Notes { get; set; }
+        public bool ForceOverride { get; set; } = false;
     }
 
     public class ClockOutRequest
